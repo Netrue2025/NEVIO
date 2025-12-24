@@ -22,6 +22,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Jeffgreco13\FilamentBreezy\BreezyCore;
 use App\Filament\App\Widgets\UserStatsOverview;
+use App\Filament\Pages\UserSenderSettings;
 use Leandrocfe\FilamentApexCharts\FilamentApexChartsPlugin;
 
 class AppPanelProvider extends PanelProvider
@@ -39,6 +40,7 @@ class AppPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/App/Pages'), for: 'App\Filament\App\Pages')
             ->pages([
                 Dashboard::class,
+                UserSenderSettings::class,
             ])
             ->discoverWidgets(in: app_path('Filament/App/Widgets'), for: 'App\Filament\App\Widgets')
             ->widgets([

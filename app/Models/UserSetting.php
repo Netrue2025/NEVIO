@@ -14,6 +14,9 @@ class UserSetting extends Model
         'user_id',
         'from_email',
         'from_phone',
+        'twillo_uk_phone_from',
+        'twillo_us_phone_from',
+        'africa_tallking_phone_from'
     ];
 
     public function user(): BelongsTo

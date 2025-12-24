@@ -31,11 +31,11 @@ class ContactNumberResource extends Resource
                     ->maxLength(255),
                 Forms\Components\TextInput::make('phone_number')
                     ->label('Phone Number')
+                    ->tel()
                     ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('country_code')
-                    ->maxLength(5)
-                    ->placeholder('+234'),
+                    ->helperText('Use international format, e.g. +2348012345678')
+                    ->telRegex('/^\+[1-9]\d{7,14}$/'),
+
                 Forms\Components\TextInput::make('country')
                     ->maxLength(255)
                     ->placeholder('NG'),
@@ -54,8 +54,6 @@ class ContactNumberResource extends Resource
                 Tables\Columns\TextColumn::make('phone_number')
                     ->label('Phone')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('country_code')
-                    ->label('Code'),
                 Tables\Columns\TextColumn::make('country'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -166,7 +164,7 @@ class ContactNumberResource extends Resource
                             /** @var \App\Models\ContactNumber $contact */
                             try {
                                 $provider = SmsService::determineProvider($contact->country_code, $contact->country);
-                                
+
                                 $smsService->send(
                                     $contact->phone_number,
                                     $data['message'],
@@ -243,10 +241,10 @@ class ContactNumberResource extends Resource
             'edit' => Pages\EditContactNumber::route('/{record}/edit'),
         ];
     }
-protected function getRedirectUrl(): string
-{
-    return $this->getResource()::getUrl('index');
-}
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
     public static function getNavigationLabel(): string
     {
         return 'Numbers';
@@ -262,5 +260,3 @@ protected function getRedirectUrl(): string
         return 'heroicon-o-phone';
     }
 }
-
-

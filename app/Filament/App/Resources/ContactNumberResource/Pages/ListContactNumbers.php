@@ -49,11 +49,21 @@ class ListContactNumbers extends ListRecords
 
                         return;
                     }
+                    $settings = $user->settings;
 
+                    if (!SmsService::hasValidSenderSettings($settings)) {
+                        Notification::make()
+                            ->title('Sender settings not configured')
+                            ->body('Please configure all sender phone number in Sender Settings before sending SMS.')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
                     $appSetting = AppSetting::query()->first();
                     $pricePerMessage = $appSetting?->sms_price_per_message ?? 0;
 
-                    if ($pricePerMessage <= 0) {
+                    if ($pricePerMessage === null) {
                         Notification::make()
                             ->title('SMS price not configured')
                             ->body('Contact admin to set SMS price before sending messages.')
@@ -115,15 +125,14 @@ class ListContactNumbers extends ListRecords
                     }
 
                     $smsService = app(SmsService::class);
-                    $from = optional($user->settings)->from_phone;
                     $sent = 0;
                     $failed = 0;
 
                     foreach ($contacts as $contact) {
                         /** @var \App\Models\ContactNumber $contact */
                         try {
-                            $provider = SmsService::determineProvider($contact->country_code, $contact->country);
-
+                            $provider = SmsService::determineProvider($contact->phone_number);
+                            $from = SmsService::determineFrom($user->settings, $contact->phone_number);
                             $smsService->send(
                                 $contact->phone_number,
                                 $data['message'],

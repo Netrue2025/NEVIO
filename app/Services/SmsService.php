@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\SmsMessage;
+use App\Models\UserSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -47,7 +48,6 @@ class SmsService
             $result = match ($provider) {
                 'africastalking' => $this->sendViaAfricasTalking($to, $message, $from),
                 'twilio' => $this->sendViaTwilio($to, $message, $from),
-                'zenvia' => $this->sendViaZenvia($to, $message, $from),
                 default => throw new \Exception("Unknown SMS provider: {$provider}"),
             };
 
@@ -90,7 +90,7 @@ class SmsService
     {
         $apiKey = config('services.africas_talking.api_key');
         $username = config('services.africas_talking.username');
-        $senderId = config('services.africas_talking.sender_id', $from);
+        /*  $senderId = $from; */
 
         if (!$apiKey || !$username) {
             throw new \Exception('Africa\'s Talking API credentials not configured');
@@ -102,8 +102,8 @@ class SmsService
         ])->asForm()->post("https://api.africastalking.com/version1/messaging", [
             'username' => $username,
             'to' => $this->formatPhoneNumber($to),
-            'message' => $message,
-            'from' => $senderId,
+            'message' => $message
+            /*  'from' => $senderId, */
         ]);
 
         if (!$response->successful()) {
@@ -112,7 +112,7 @@ class SmsService
 
         $data = $response->json();
         $recipients = $data['SMSMessageData']['Recipients'] ?? [];
-        
+
         if (empty($recipients) || $recipients[0]['statusCode'] !== '101') {
             throw new \Exception("Africa's Talking failed: " . ($recipients[0]['status'] ?? 'Unknown error'));
         }
@@ -129,7 +129,7 @@ class SmsService
     {
         $accountSid = config('services.twilio.account_sid');
         $authToken = config('services.twilio.auth_token');
-        $fromNumber = config('services.twilio.from_number', $from);
+        $fromNumber = $from;
 
         if (!$accountSid || !$authToken || !$fromNumber) {
             throw new \Exception('Twilio API credentials not configured');
@@ -155,43 +155,7 @@ class SmsService
         ];
     }
 
-    /**
-     * Send SMS via Zenvia (Brazil)
-     */
-    protected function sendViaZenvia(string $to, string $message, ?string $from): array
-    {
-        $apiKey = config('services.zenvia.api_key');
-        $fromNumber = config('services.zenvia.from_number', $from);
 
-        if (!$apiKey || !$fromNumber) {
-            throw new \Exception('Zenvia API credentials not configured');
-        }
-
-        $response = Http::withHeaders([
-            'X-API-TOKEN' => $apiKey,
-            'Content-Type' => 'application/json',
-        ])->post('https://api.zenvia.com/v2/channels/sms/messages', [
-            'from' => $fromNumber,
-            'to' => $this->formatPhoneNumber($to),
-            'contents' => [
-                [
-                    'type' => 'text',
-                    'text' => $message,
-                ],
-            ],
-        ]);
-
-        if (!$response->successful()) {
-            $error = $response->json();
-            throw new \Exception("Zenvia API error: " . ($error['message'] ?? $response->body()));
-        }
-
-        $data = $response->json();
-
-        return [
-            'message_id' => $data['id'] ?? null,
-        ];
-    }
 
     /**
      * Format phone number (remove spaces, dashes, etc.)
@@ -200,42 +164,89 @@ class SmsService
     {
         // Remove all non-digit characters except +
         $phone = preg_replace('/[^\d+]/', '', $phone);
-        
+
         // Ensure it starts with + or country code
         if (!str_starts_with($phone, '+')) {
-            // If it doesn't start with +, assume it needs country code
-            // This is a basic implementation - you may need to adjust based on your needs
+
             $phone = '+' . ltrim($phone, '0');
         }
 
         return $phone;
     }
+    /**
+     * Extract country code from an E.164 phone number
+     * Example: +2348012345678 → 234
+     */
+    public static function extractCountryCode(string $phone): ?string
+    {
+        if (preg_match('/^\+(\d{1,3})/', $phone, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
 
     /**
-     * Determine provider based on country code or country name
+     * Determine SMS provider based on phone number
      */
-    public static function determineProvider(?string $countryCode = null, ?string $country = null): string
+    public static function determineProvider(string $phoneNumber): string
     {
-        $countryCode = strtoupper((string) $countryCode);
-        $country = strtoupper((string) $country);
+        $countryCode = self::extractCountryCode($phoneNumber);
 
-        // Nigeria
-        if ($countryCode === '+234' || $country === 'NG' || $country === 'NIGERIA' || $countryCode === '234') {
+        if ($countryCode === '234') {
             return 'africastalking';
         }
 
-        // UK and USA
-        if (in_array($country, ['UK', 'GB', 'UNITED KINGDOM', 'US', 'USA', 'UNITED STATES'], true)) {
+        if (in_array($countryCode, ['44', '1'], true)) {
             return 'twilio';
         }
 
-        // Brazil
-        if (in_array($country, ['BR', 'BRAZIL'], true)) {
-            return 'zenvia';
-        }
-
-        // Default to Twilio
         return 'twilio';
     }
-}
 
+    /**
+     * Determine sender ("from") number based on contact phone number
+     */
+    public static function determineFrom(
+        ?\App\Models\UserSetting $settings,
+        string $contactPhone
+    ): ?string {
+        if (! $settings) {
+            return null;
+        }
+
+        $countryCode = self::extractCountryCode($contactPhone);
+
+        return match ($countryCode) {
+            '234' => $settings->africa_tallking_phone_from
+                ?: $settings->from_phone,
+
+            '44' => $settings->twillo_uk_phone_from
+                ?: $settings->from_phone,
+
+            '1' => $settings->twillo_us_phone_from
+                ?: $settings->from_phone,
+
+            default => $settings->from_phone,
+        };
+    }
+
+
+    /**
+     * Check if user has ALL sender settings configured
+     */
+    public static function hasValidSenderSettings(?UserSetting $settings): bool
+    {
+        if (! $settings) {
+            return false;
+        }
+
+        return collect([
+            $settings->from_phone,
+            $settings->twillo_uk_phone_from,
+            $settings->twillo_us_phone_from,
+            $settings->africa_tallking_phone_from,
+        ])
+            ->every(fn($value) => filled($value));
+    }
+}
