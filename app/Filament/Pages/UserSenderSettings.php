@@ -64,11 +64,7 @@ class UserSenderSettings extends Page
                     ]),
                 ]),
                 Section::make('AfricaTalking Sender Settings')->schema([
-                    Forms\Components\TextInput::make('africa_tallking_phone_from')->tel()
-                        ->label('AfricaTalking Phone From')->dehydrateStateUsing(
-                            fn($state) =>
-                            $state ? preg_replace('/\s+/', '', $state) : null
-                        ),
+                    Forms\Components\TextInput::make('africa_tallking_phone_from')->maxLength(255),
                 ]),
             ]);
     }
