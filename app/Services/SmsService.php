@@ -90,7 +90,7 @@ class SmsService
     {
         $apiKey = config('services.africas_talking.api_key');
         $username = config('services.africas_talking.username');
-        /*  $senderId = $from; */
+        $senderId = $from;
 
         if (!$apiKey || !$username) {
             throw new \Exception('Africa\'s Talking API credentials not configured');
@@ -102,8 +102,8 @@ class SmsService
         ])->asForm()->post("https://api.africastalking.com/version1/messaging", [
             'username' => $username,
             'to' => $this->formatPhoneNumber($to),
-            'message' => $message
-            /*  'from' => $senderId, */
+            'message' => $message,
+            'from' => $senderId,
         ]);
 
         if (!$response->successful()) {
