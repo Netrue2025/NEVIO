@@ -19,7 +19,7 @@ class EmailMessageResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $query->where('user_id', Auth::id());
+                $query->where('user_id', Auth::id())->orderBy('created_at', 'desc');
             })
             ->columns([
                 Tables\Columns\TextColumn::make('to')

@@ -132,7 +132,7 @@ class ListContactNumbers extends ListRecords
                         /** @var \App\Models\ContactNumber $contact */
                         try {
                             $provider = SmsService::determineProvider($contact->phone_number);
-                            $from = SmsService::determineFrom($user->settings, $contact->phone_number);
+                            $from = SmsService::determineFrom($contact->phone_number);
                             $smsService->send(
                                 $contact->phone_number,
                                 $data['message'],

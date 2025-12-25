@@ -84,43 +84,69 @@ class SmsService
         return $smsMessage;
     }
 
-    /**
-     * Send SMS via Africa's Talking (Nigeria)
-     */
     protected function sendViaAfricasTalking(string $to, string $message, ?string $from): array
     {
-        $apiKey = config('services.africas_talking.api_key');
+        $apiKey   = config('services.africas_talking.api_key');
         $username = config('services.africas_talking.username');
-        $senderId = $from;
 
-        if (!$apiKey || !$username) {
-            throw new \Exception('Africa\'s Talking API credentials not configured');
+        if (! $apiKey || ! $username) {
+            throw new \Exception("Africa's Talking API credentials not configured");
+        }
+
+        $payload = [
+            'username' => $username,
+            'to'       => $this->formatPhoneNumber($to),
+            'message'  => $message,
+        ];
+
+        if ($this->shouldSendAfricaFrom($from)) {
+            $payload['from'] = $from;
         }
 
         $response = Http::withHeaders([
             'apiKey' => $apiKey,
-            'Content-Type' => 'application/x-www-form-urlencoded',
-        ])->asForm()->post("https://api.africastalking.com/version1/messaging", [
-            'username' => $username,
-            'to' => $this->formatPhoneNumber($to),
-            'message' => $message,
-            'from' => $senderId,
-        ]);
+            'Accept' => 'application/json',
+        ])
+            ->asForm()
+            ->post('https://api.africastalking.com/version1/messaging', $payload);
 
-        if (!$response->successful()) {
-            throw new \Exception("Africa's Talking API error: " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception(
+                "Africa's Talking HTTP error ({$response->status()}): " . $response->body()
+            );
         }
 
         $data = $response->json();
-        $recipients = $data['SMSMessageData']['Recipients'] ?? [];
 
-        if (empty($recipients) || $recipients[0]['statusCode'] !== '101') {
-            throw new \Exception("Africa's Talking failed: " . ($recipients[0]['status'] ?? 'Unknown error'));
+        if (! is_array($data)) {
+            throw new \Exception(
+                "Africa's Talking returned non-JSON response: " . $response->body()
+            );
         }
 
-        return [
-            'message_id' => $recipients[0]['messageId'] ?? null,
-        ];
+        $recipients = $data['SMSMessageData']['Recipients'] ?? [];
+
+        // Build a per-recipient status array
+        $results = [];
+        foreach ($recipients as $recipient) {
+            $results[] = [
+                'provider'   => 'africas_talking',
+                'number'     => $recipient['number'] ?? null,
+                'status'     => $recipient['status'] ?? 'Unknown',
+                'statusCode' => $recipient['statusCode'] ?? null,
+                'message_id' => $recipient['messageId'] ?? null,
+                'cost'       => $recipient['cost'] ?? null,
+            ];
+        }
+
+        return $results;
+    }
+    /**
+     * Decide if `from` should be sent to Africa's Talking
+     */
+    protected function shouldSendAfricaFrom(?string $from): bool
+    {
+        return filled($from) && $from !== 'AFRICASTKNG';
     }
 
     /**
