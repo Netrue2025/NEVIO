@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SmsMessage;
 use App\Models\UserSetting;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -204,13 +205,23 @@ class SmsService
         return 'twilio';
     }
 
+    protected static function getAuthUserSettings(): ?UserSetting
+    {
+        $userId = Auth::id();
+
+        if (! $userId) {
+            return null;
+        }
+
+        return UserSetting::where('user_id', $userId)->first();
+    }
     /**
      * Determine sender ("from") number based on contact phone number
      */
-    public static function determineFrom(
-        ?\App\Models\UserSetting $settings,
-        string $contactPhone
-    ): ?string {
+    public static function determineFrom(string $contactPhone): ?string
+    {
+        $settings = self::getAuthUserSettings();
+
         if (! $settings) {
             return null;
         }
@@ -231,12 +242,13 @@ class SmsService
         };
     }
 
-
     /**
-     * Check if user has ALL sender settings configured
+     * Check if authenticated user has ALL sender settings configured
      */
-    public static function hasValidSenderSettings(?UserSetting $settings): bool
+    public static function hasValidSenderSettings(): bool
     {
+        $settings = self::getAuthUserSettings();
+
         if (! $settings) {
             return false;
         }
@@ -246,7 +258,6 @@ class SmsService
             $settings->twillo_uk_phone_from,
             $settings->twillo_us_phone_from,
             $settings->africa_tallking_phone_from,
-        ])
-            ->every(fn($value) => filled($value));
+        ])->every(fn($value) => filled($value));
     }
 }
