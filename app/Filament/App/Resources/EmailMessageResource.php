@@ -4,6 +4,8 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\EmailMessageResource\Pages;
 use App\Models\EmailMessage;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions\ViewAction as ActionsViewAction;
@@ -41,8 +43,11 @@ class EmailMessageResource extends Resource
             ->filters([])
             ->actions([
                 ActionsViewAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getPages(): array

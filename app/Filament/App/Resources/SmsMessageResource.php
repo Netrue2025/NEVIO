@@ -4,6 +4,8 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\SmsMessageResource\Pages;
 use App\Models\SmsMessage;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions\ViewAction as ActionsViewAction;
@@ -44,8 +46,11 @@ class SmsMessageResource extends Resource
             ->filters([])
             ->actions([
                 ActionsViewAction::make(),
+                   DeleteAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getPages(): array
