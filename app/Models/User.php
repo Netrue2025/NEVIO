@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Models\AppSetting;
+use App\Models\BirthdayContact;
+use App\Models\BirthdayTemplate;
 use App\Models\ContactEmail;
 use App\Models\ContactNumber;
 use App\Models\EmailMessage;
@@ -42,6 +44,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'role',
+        'is_whatsapp_subscribed',
     ];
 
     /**
@@ -64,6 +67,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_whatsapp_subscribed' => 'boolean',
         ];
     }
 
@@ -105,6 +109,16 @@ class User extends Authenticatable implements FilamentUser
     public function emailMessages(): HasMany
     {
         return $this->hasMany(EmailMessage::class);
+    }
+
+    public function birthdayContacts(): HasMany
+    {
+        return $this->hasMany(BirthdayContact::class);
+    }
+
+    public function birthdayTemplates(): HasMany
+    {
+        return $this->hasMany(BirthdayTemplate::class);
     }
 }
 

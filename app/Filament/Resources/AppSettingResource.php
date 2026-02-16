@@ -25,6 +25,11 @@ class AppSettingResource extends Resource
                     ->numeric()
                     ->required()
                     ->minValue(0),
+                      Forms\Components\TextInput::make('whatsapp_message_cost')
+                    ->label('Price per WhatsApp Message (NGN)')
+                    ->numeric()
+                    ->required()
+                    ->minValue(0),
                 Forms\Components\TextInput::make('currency')
                     ->default('NGN')
                     ->maxLength(10),
@@ -37,10 +42,9 @@ class AppSettingResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('sms_price_per_message')
                     ->label('Price per SMS (NGN)'),
-                Tables\Columns\TextColumn::make('currency'),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->label('Last updated'),
+                Tables\Columns\TextColumn::make('whatsapp_message_cost')
+                    ->label('Price per WhatsApp Message (NGN)'),
+                Tables\Columns\TextColumn::make('currency')
             ])
             ->recordActions([
                 EditAction::make(),
@@ -60,7 +64,7 @@ class AppSettingResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return 'SMS Pricing';
+        return 'App settings';
     }
 
     public static function getNavigationGroup(): ?string
