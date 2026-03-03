@@ -12,9 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('user_settings', function (Blueprint $table) {
-            $table->string('twillo_uk_phone_from')->nullable();
-            $table->string('twillo_us_phone_from')->nullable();
-            $table->string('africa_tallking_phone_from')->nullable();
+            if (!Schema::hasColumn('user_settings', 'twillo_uk_phone_from')) {
+                $table->string('twillo_uk_phone_from')->nullable();
+            }
+
+            if (!Schema::hasColumn('user_settings', 'twillo_us_phone_from')) {
+                $table->string('twillo_us_phone_from')->nullable();
+            }
+
+            if (!Schema::hasColumn('user_settings', 'africa_tallking_phone_from')) {
+                $table->string('africa_tallking_phone_from')->nullable();
+            }
         });
     }
 
@@ -24,9 +32,18 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('user_settings', function (Blueprint $table) {
-               $table->dropColumn('twillo_uk_phone_from')->nullable();
-            $table->dropColumn('twillo_us_phone_from')->nullable();
-            $table->dropColumn('africa_tallking_phone_from')->nullable();
+
+            if (Schema::hasColumn('user_settings', 'twillo_uk_phone_from')) {
+                $table->dropColumn('twillo_uk_phone_from');
+            }
+
+            if (Schema::hasColumn('user_settings', 'twillo_us_phone_from')) {
+                $table->dropColumn('twillo_us_phone_from');
+            }
+
+            if (Schema::hasColumn('user_settings', 'africa_tallking_phone_from')) {
+                $table->dropColumn('africa_tallking_phone_from');
+            }
         });
     }
 };
