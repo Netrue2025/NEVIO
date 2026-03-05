@@ -130,7 +130,7 @@ class BirthdayContactResource extends Resource
                         $templatePath = config('birthday-template.template_path');
 
                         if (file_exists($templatePath)) {
-                            return redirect()->to('/storage/templates/birthday-template.png.png');
+                            return redirect()->to('/storage/templates/birthday-template.png');
                         }
 
                         Notification::make()
