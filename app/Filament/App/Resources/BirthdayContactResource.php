@@ -6,7 +6,11 @@ use App\Filament\App\Resources\BirthdayContactResource\Pages;
 use App\Filament\App\Pages\WhatsAppSubscription;
 use App\Models\BirthdayContact;
 use App\Services\BirthdayImageGenerator;
+use App\Services\WhatsAppService;
+use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
 use Filament\Actions\Action as ActionsAction;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -14,6 +18,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
@@ -112,6 +117,76 @@ class BirthdayContactResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    BulkAction::make('sendBirthdayWishes')
+                        ->label('Send Birthday Wishes')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->color('success')
+                            ->action(function (\Illuminate\Support\Collection $records) {
+                                $whatsappService = new WhatsAppService();
+                                $imageGenerator = new BirthdayImageGenerator();
+
+                                $sent = 0;
+                                $failed = 0;
+
+                                $ids = $records->pluck('id')->toArray();
+                                $contacts = \App\Models\BirthdayContact::whereIn('id', $ids)->with('user')->get();
+
+                                foreach ($contacts as $contact) {
+                                    try {
+                                        $imagePath = $imageGenerator->generate($contact);
+
+                                        if ($contact->user->is_whatsapp_subscribed) {
+                                            try {
+                                                if ($contact->phone) {
+                                                    $mediaId = $whatsappService->uploadImage($imagePath);
+                                                    $whatsappService->sendImageMessage(
+                                                        $contact->phone,
+                                                        $mediaId,
+                                                        "Happy Birthday, {$contact->name}! 🎂"
+                                                    );
+                                                }
+
+                                                if ($contact->whatsapp_group_id) {
+                                                    $whatsappService->sendImageMessage(
+                                                        $contact->whatsapp_group_id,
+                                                        $mediaId,
+                                                        "Happy Birthday, {$contact->name}! 🎂"
+                                                    );
+                                                }
+
+                                                $sent++;
+                                            } catch (\Exception $e) {
+                                                $failed++;
+                                            }
+                                        }
+
+                                        if ($contact->email) {
+                                            try {
+                                                Mail::send([], [], function ($message) use ($contact, $imagePath) {
+                                                    $message->to($contact->email)
+                                                        ->subject("🎉 Happy Birthday {$contact->name}!")
+                                                        ->attach($imagePath)
+                                                        ->html("Happy Birthday, {$contact->name}! 🎂 Wishing you joy and prosperity.");
+                                                });
+                                                $sent++;
+                                            } catch (\Exception $e) {
+                                                $failed++;
+                                            }
+                                        }
+                                    } catch (\Exception $e) {
+                                        $failed++;
+                                    }
+                                }
+
+                                $title = 'Birthday Wishes Processed';
+                                $body = "Processed: " . ($sent + $failed) . ". Sent: {$sent}. Failed: {$failed}.";
+
+                                Notification::make()
+                                    ->success()
+                                    ->title($title)
+                                    ->body($body)
+                                    ->send();
+                            }),
                 ]),
             ])
             ->headerActions([
