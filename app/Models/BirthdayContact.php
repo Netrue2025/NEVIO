@@ -12,7 +12,7 @@ class BirthdayContact extends Model
 
     protected $fillable = [
         'user_id', 'name', 'phone', 'email', 'birthday',
-        'photo_path', 'whatsapp_group_id', 'is_active'
+        'photo_path', 'whatsapp_group_id', 'is_active', 'birthday_message'
     ];
 
     protected $casts = [

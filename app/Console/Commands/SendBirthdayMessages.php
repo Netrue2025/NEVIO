@@ -61,7 +61,7 @@ class SendBirthdayMessages extends Command
                             $whatsappService->sendImageMessage(
                                 $contact->phone,
                                 $mediaId,
-                                "Happy Birthday, {$contact->name}! 🎂"
+                                $contact->birthday_message ?? "Happy Birthday, {$contact->name}! 🎂"
                             );
                         };
 
@@ -70,7 +70,7 @@ class SendBirthdayMessages extends Command
                             $whatsappService->sendImageMessage(
                                 $contact->whatsapp_group_id,
                                 $mediaId,
-                                "Happy Birthday, {$contact->name}! 🎂"
+                                $contact->birthday_message ?? "Happy Birthday, {$contact->name}! 🎂"
                             );
                         }
 
@@ -91,7 +91,7 @@ class SendBirthdayMessages extends Command
                             $message->to($contact->email)
                                 ->subject("🎉 Happy Birthday {$contact->name}!")
                                 ->attach($imagePath)
-                                ->html("Happy Birthday, {$contact->name}! 🎂 Wishing you joy and prosperity.");
+                                ->html($contact->birthday_message ?? "Happy Birthday, {$contact->name}! 🎂 Wishing you joy and prosperity.");
                         });
                         $this->info("Email sent to {$contact->name}");
                         $sent++;
